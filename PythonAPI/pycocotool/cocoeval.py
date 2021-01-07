@@ -584,6 +584,16 @@ class COCOeval:
                 save_file = '%s/%s.png' % (save_dir, plotname)
                 print('save figure to %s' % save_file)
                 fig.savefig(save_file)
+                import pandas as pd
+                print(f'ds.shape {ds.shape}')
+                print(f'recThrs.shape {recThrs.shape}')
+                print(f'ps.shape {ps.shape}')
+                print(f'ap.shape {ap.shape}')
+                ls.append('recThrs')
+                #df = pd.DataFrame(np.concatenate((ps.T, np.expand_dims(recThrs, axis=0))), columns=ls)
+                df = pd.DataFrame(np.concatenate((ps, np.expand_dims(recThrs, axis=0))).T, columns=ls)
+                df.to_csv(save_file[:-4]+'.csv')
+
             fig.canvas.draw()
             data = np.fromstring(fig.canvas.tostring_rgb(), dtype=np.uint8, sep='')
             data = data.reshape(fig.canvas.get_width_height()[::-1] + (3,))

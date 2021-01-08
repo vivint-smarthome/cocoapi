@@ -25,3 +25,14 @@ pip install numpy
 # git clone git@gitlab.com:vivint/cv/cocoapi.git
 python -m pip install -e "git+git@gitlab.com:vivint/cv/cocoapi.git@add_analyze_func#egg=pycocotools&subdirectory=PythonAPI"
 ```
+
+Without credentials you can use the github repo:
+```
+# first satisfy the requirements
+dnf update -y
+dnf install git gcc python3-devel -y
+pip install numpy
+# install with pip over https
+python -m pip install -e "git+https://github.com/vivint-smarthome/cocoapi.git@add_analyze_func#egg=pycocotools&subdirectory=PythonAPI"
+```
+

@@ -59,10 +59,19 @@ import os
 from collections import defaultdict
 import sys
 PYTHON_VERSION = sys.version_info[0]
-if PYTHON_VERSION == 2:
-    from urllib import urlretrieve
-elif PYTHON_VERSION == 3:
-    from urllib.request import urlretrieve
+
+def download_blob(bucket_name, source_blob_name, destination_file_name):
+    """Downloads a blob from the bucket."""
+    from google.cloud import storage
+    storage_client = storage.Client(project='video-analytics-193323')
+    bucket = storage_client.get_bucket(bucket_name)
+    blob = bucket.blob(source_blob_name)
+
+    blob.download_to_filename(destination_file_name)
+
+def urlretrieve(url, path):
+    p = url.split('/')
+    download_blob(p[2], '/'.join(p[3:]), path)
 
 
 def _isArrayLike(obj):
@@ -92,7 +101,7 @@ class COCO:
     def createIndex(self):
         # create index
         print('creating index...')
-        anns, cats, imgs = {}, {}, {}
+        anns, cats, imgs, urls = {}, {}, {}, {}
         imgToAnns,catToImgs = defaultdict(list),defaultdict(list)
         if 'annotations' in self.dataset:
             for ann in self.dataset['annotations']:
@@ -102,6 +111,7 @@ class COCO:
         if 'images' in self.dataset:
             for img in self.dataset['images']:
                 imgs[img['id']] = img
+                urls[img['gs_url']] = img['id']
 
         if 'categories' in self.dataset:
             for cat in self.dataset['categories']:
@@ -119,6 +129,7 @@ class COCO:
         self.catToImgs = catToImgs
         self.imgs = imgs
         self.cats = cats
+        self.urls = urls
 
     def info(self):
         """
@@ -386,7 +397,7 @@ class COCO:
             tic = time.time()
             fname = os.path.join(tarDir, img['file_name'])
             if not os.path.exists(fname):
-                urlretrieve(img['coco_url'], fname)
+                urlretrieve(img['gs_url'], fname)
             print('downloaded {}/{} images (t={:0.1f}s)'.format(i, N, time.time()- tic))
 
     def loadNumpyAnnotations(self, data):
@@ -441,3 +452,7 @@ class COCO:
         rle = self.annToRLE(ann)
         m = maskUtils.decode(rle)
         return m
+
+    def urlToId(self, url):
+        return self.urls.get(url, f'Unknown url: {url}')
+

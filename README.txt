@@ -13,3 +13,15 @@ To install:
 -For Matlab, add coco/MatlabApi to the Matlab path (OSX/Linux binaries provided)
 -For Python, run "make" under coco/PythonAPI
 -For Lua, run “luarocks make LuaAPI/rocks/coco-scm-1.rockspec” under coco/
+
+Alternatively you can install with pip from the gitlab repo:
+```
+# first satisfy the requirements
+dnf update -y
+dnf install git gcc python3-devel -y
+pip install numpy
+# if your git user.name is set and ssh key are available you should be able to clone as follows:
+# git config --global user.name "username"
+# git clone git@gitlab.com:vivint/cv/cocoapi.git
+python -m pip install -e "git+git@gitlab.com:vivint/cv/cocoapi.git@add_analyze_func#egg=pycocotools&subdirectory=PythonAPI"
+```

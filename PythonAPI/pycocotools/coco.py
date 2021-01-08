@@ -454,5 +454,9 @@ class COCO:
         return m
 
     def urlToId(self, url):
-        return self.urls.get(url, f'Unknown url: {url}')
+        """
+        Given a google storage url returns the image id in the dataset if it exists
+        :return: image id
+        """
+        return self.urls.get(url)
 

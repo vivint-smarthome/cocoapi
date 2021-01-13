@@ -315,7 +315,7 @@ class COCO:
             for ann in anns:
                 print(ann['caption'])
 
-    def loadRes(self, resFile):
+    def loadRes(self, resFile, threshold=0.0):
         """
         Load result file and return a result api object.
         :param   resFile (str)     : file name of result file
@@ -333,6 +333,8 @@ class COCO:
         else:
             anns = resFile
         assert type(anns) == list, 'results in not an array of objects'
+        # remove annotations below the score threshold, to understand score better
+        anns = [ann for ann in anns if ann['score'] >= threshold]
         annsImgIds = [ann['image_id'] for ann in anns]
         assert set(annsImgIds) == (set(annsImgIds) & set(self.getImgIds())), \
                'Results do not correspond to current coco set'

@@ -540,7 +540,7 @@ class COCOeval:
 
         return new_annotations
 
-    def makeplot(self, recThrs, precisions, name, save_dir=None):
+    def makeplot(self, recThrs, precisions, name, save_dir=None, confidence_indices=None):
         if save_dir is not None and not os.path.exists(save_dir):
             os.makedirs(save_dir)
         #precisions  7x101x4x1]
@@ -578,6 +578,15 @@ class COCOeval:
             plt.xlabel('recall')
             plt.ylabel('precision')
             plt.title(plotname)
+            if confidence_indices:
+                confidence_colors = ['r', 'g', 'b']
+                for k, key in enumerate(confidence_indices.keys()):
+                    c = confidence_colors[k % len(confidence_colors)]
+                    for i in range(ps.shape[0]):
+                        index = confidence_indices[key][i]
+                        if index == -1:
+                            continue
+                        plt.plot(recThrs[index], ps[i, index], c + '*')
 
             # if save_dir is set, figure will be saved to save_dir
             if save_dir is not None:
@@ -597,7 +606,7 @@ class COCOeval:
         return figures_np
 
 
-    def analyze(self, save_to_dir=None):
+    def analyze(self, save_to_dir=None, catIds=[]):
         '''
         Analyze errors
         Args:
@@ -607,7 +616,8 @@ class COCOeval:
         self.params.outDir = save_to_dir
         prm = copy.deepcopy(self.params)
         self.params.maxDets = [100]
-        catIds = sorted(self.cocoGt.getCatIds())
+        if len(catIds) == 0:
+            catIds = sorted(self.cocoGt.getCatIds())
         self.params.catIds = catIds
         self.params.iouThrs = np.array([0.75, 0.5, 0.1])
         self.evaluate()
@@ -678,6 +688,187 @@ class COCOeval:
             # np.save(result_file, ps)
 
             figures = self.makeplot(self.params.recThrs, ps[:, :, k, :, :], nm, save_dir=self.params.outDir)
+            self.analyze_figures.update(figures)
+            print('Analyzing DONE (t=%0.2fs).' %(end_time-start_time))
+
+        # reset Dt and Gt, params
+        self.params = prm
+        figures = self.makeplot(self.params.recThrs, np.mean(ps, axis=2),
+                       'overall-all', save_dir=self.params.outDir)
+        self.analyze_figures.update(figures)
+        if 'supercategory' in list(self.cocoGt.cats.values())[0]:
+            sup = [cat['supercategory'] for cat in self.cocoGt.loadCats(catIds)]
+            print('all sup cats: %s' %(set(sup)))
+            for k in set(sup):
+                ps1 = np.mean(ps[:, :, np.array(sup)==k, :, :], axis=2)
+                figures = self.makeplot(self.params.recThrs, ps1, 'overall-%s' % k, save_dir=self.params.outDir)
+                self.analyze_figures.update(figures)
+
+    def analyze_threshold(self, confidence_threshold, catId):
+        # load only the annotations that are above the confidence threshold
+        ce = COCOeval(self.cocoGt,
+                      self.cocoGt.loadRes(self.cocoDt.dataset['annotations'], threshold=confidence_threshold),
+                      self.params.iouType)
+        prm = copy.deepcopy(self.params)
+        ce.params.maxDets = [100]
+        ce.params.catIds = [catId]
+        ce.params.iouThrs = np.array([0.75, 0.5, 0.1])
+        ce.evaluate()
+        ce.accumulate()
+        ps = ce.eval['precision']
+        # 0 for C75
+        # 1 for C50
+        # 2 for Loc
+        # 3 for Sim
+        # 4 for Other
+        # 5 for BG
+        # 5 for FN
+        ps = np.concatenate((ps, np.zeros([4] + list(ps.shape[1:]))))
+
+        ce.params.iouThrs = np.array([0.1])
+        ce.params.useCats = 0
+
+        dt = ce.cocoDt
+        gt = ce.cocoGt
+        nm = ce.cocoGt.loadCats(catId)[0]
+        if 'supercategory' in nm:
+            nm = nm['supercategory'] + '-' + nm['name']
+        else:
+            nm = nm['name']
+        print('Analyzing for confidence threshold %s (%d):' %(nm, 0))
+
+        # select detections for single category only
+        ce.params.keepDtCatIds = [catId]
+
+        # compute precision but ignore superclass confusion
+        cur_cat = gt.loadCats(catId)[0]
+        if 'supercategory' in cur_cat:
+            similar_cat_ids = gt.getCatIds(supNms=cur_cat['supercategory'])
+            ce.params.keepGtCatIds = similar_cat_ids
+            ce.params.targetCatId = catId
+
+            # computeIoU need real catIds, we need to recover it
+            ce.params.catIds = [catId]
+            ce.evaluate()
+            ce.accumulate()
+            ps[3, :, 0, :, :] = ce.eval['precision'][0, :, 0, :, :]
+        else:
+            # skip  superclass confusion evaluation
+            ps[3, :, 0, :, :] = ps[2, :, 0, :, :]
+
+        # compute precision but ignore any class confusion
+        ce.params.targetCatId = catId
+        ce.params.keepGtCatIds = [catId]
+        ce.params.catIds = [catId]
+        ce.evaluate()
+        ce.accumulate()
+        ps[4, :, 0, :, :] = ce.eval['precision'][0, :, 0, :, :]
+
+        # fill in background and false negative errors and plot
+        ps[ps == -1] = 0
+        ps[5, :, 0, :] = (ps[4, :, 0, :] > 0).astype(np.float32)
+        ps[6, :, 0, :] = 1
+        indices = []
+        for k in range(ps.shape[0]):
+            try:
+                indices.append(np.where(ps[k, :, 0, 0, 0] == 0)[0][0] - 1)
+            except:
+                indices.append(-1)
+        return indices
+
+    def analyze_thresholds(self, save_to_dir=None, confidence_thresholds=[], catIds=[]):
+        '''
+        Analyze errors with confidence thresholds
+        Args:
+          confidence_thresholds: list of confidence thresholds to analyze more carefully
+          catIds: category ids to use
+          save_to_dir: directory to save figures of analyzing results, if set None,
+            figures will not be saved
+
+        This is to better understand certain operating points of the model.  Given a precision number and the
+        IOU threshold we should know the the recall and the confidence threshold.  This is a hack to help
+        visualize where the confidence thresholds fit into the precision-recall curves.
+
+        Note: this is not very well optimized.
+        '''
+        self.params.outDir = save_to_dir
+        prm = copy.deepcopy(self.params)
+        self.params.maxDets = [100]
+        if len(catIds) == 0:
+            catIds = sorted(self.cocoGt.getCatIds())
+        self.params.catIds = catIds
+        self.params.iouThrs = np.array([0.75, 0.5, 0.1])
+        self.evaluate()
+        self.accumulate()
+        ps = self.eval['precision']
+        # 0 for C75
+        # 1 for C50
+        # 2 for Loc
+        # 3 for Sim
+        # 4 for Other
+        # 5 for BG
+        # 5 for FN
+        ps = np.concatenate((ps, np.zeros([4] + list(ps.shape[1:]))))
+
+        self.params.iouThrs = np.array([0.1])
+        self.params.useCats = 0
+
+        dt = self.cocoDt
+        gt = self.cocoGt
+        self.analyze_figures = {}
+        for k, catId in enumerate(catIds):
+            nm = self.cocoGt.loadCats(catId)[0]
+            if 'supercategory' in nm:
+                nm = nm['supercategory'] + '-' + nm['name']
+            else:
+                nm = nm['name']
+            print('Analyzing %s (%d):' %(nm, k))
+            start_time = time.time()
+
+            # select detections for single category only
+            self.params.keepDtCatIds = [catId]
+
+            # compute precision but ignore superclass confusion
+            cur_cat = gt.loadCats(catId)[0]
+            if 'supercategory' in cur_cat:
+                similar_cat_ids = gt.getCatIds(supNms=cur_cat['supercategory'])
+                self.params.keepGtCatIds = similar_cat_ids
+                self.params.targetCatId = catId
+
+                # computeIoU need real catIds, we need to recover it
+                self.params.catIds = catIds
+                self.evaluate()
+                self.accumulate()
+                ps[3, :, k, :, :] = self.eval['precision'][0, :, 0, :, :]
+            else:
+                # skip  superclass confusion evaluation
+                ps[3, :, k, :, :] = ps[2, :, k, :, :]
+
+            # compute precision but ignore any class confusion
+            self.params.targetCatId = catId
+            self.params.keepGtCatIds = catIds
+            self.params.catIds = catIds
+            self.evaluate()
+            self.accumulate()
+            ps[4, :, k, :, :] = self.eval['precision'][0, :, 0, :, :]
+
+            # fill in background and false negative errors and plot
+            ps[ps == -1] = 0
+            ps[5, :, k, :] = (ps[4, :, k, :] > 0).astype(np.float32)
+            ps[6, :, k, :] = 1
+            end_time = time.time()
+
+            # test
+            # dst_dir = 'py_precision'
+            # if not os.path.exists(dst_dir):
+            #     os.makedirs(dst_dir)
+            # result_file = '%s/class_%d' % (dst_dir, k)
+            # np.save(result_file, ps)
+
+            confidence_indices = {}
+            for confidence_threshold in confidence_thresholds:
+                confidence_indices[confidence_threshold] = self.analyze_threshold(confidence_threshold, catId)
+            figures = self.makeplot(self.params.recThrs, ps[:, :, k, :, :], nm, save_dir=self.params.outDir, confidence_indices=confidence_indices)
             self.analyze_figures.update(figures)
             print('Analyzing DONE (t=%0.2fs).' %(end_time-start_time))
 

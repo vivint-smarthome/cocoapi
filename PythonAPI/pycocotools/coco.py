@@ -111,7 +111,8 @@ class COCO:
         if 'images' in self.dataset:
             for img in self.dataset['images']:
                 imgs[img['id']] = img
-                urls[img['gs_url']] = img['id']
+                if 'gs_url' in img:
+                    urls[img['gs_url']] = img['id']
 
         if 'categories' in self.dataset:
             for cat in self.dataset['categories']:
@@ -399,6 +400,9 @@ class COCO:
             tic = time.time()
             fname = os.path.join(tarDir, img['file_name'])
             if not os.path.exists(fname):
+                if 'gs_url' not in img:
+                    print('No url provided for ' + img['file_name'] + ', continuing')
+                    continue
                 urlretrieve(img['gs_url'], fname)
             print('downloaded {}/{} images (t={:0.1f}s)'.format(i, N, time.time()- tic))
 

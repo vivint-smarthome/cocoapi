@@ -991,7 +991,7 @@ class COCOeval:
 
     def summarize_2(self):
         """
-        Compute and display summary metrics for custom evaluation results.
+        Compute and display summary metrics for **custom** evaluation results.
         Paramters can be tuned via eval_custom()
         """
 

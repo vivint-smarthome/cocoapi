@@ -967,22 +967,13 @@ class COCOeval:
                 )
                 self.analyze_figures.update(figures)
 
-    def eval_custom(
-        self, confidence_thresholds=[], catIds=[], maxDets=[], ious=np.array([])
-    ):
+    def eval_custom(self, catIds=[], maxDets=[], ious=np.array([])):
         """
-        Analyze errors with confidence thresholds
+        Wrapper function to enable custom IoU during evaluation
         Args:
-          confidence_thresholds: list of confidence thresholds to analyze more carefully
           catIds: category ids to use
-          save_to_dir: directory to save figures of analyzing results, if set None,
-            figures will not be saved
-
-        This is to better understand certain operating points of the model.  Given a precision number and the
-        IOU threshold we should know the the recall and the confidence threshold.  This is a hack to help
-        visualize where the confidence thresholds fit into the precision-recall curves.
-
-        Note: this is not very well optimized.
+          maxDets: a list of maximum detections (recall metrics)
+          ious: numpy array of custom ious
         """
         prm = copy.deepcopy(self.params)
         if len(maxDets) == 0:
@@ -1000,8 +991,8 @@ class COCOeval:
 
     def summarize_2(self):
         """
-        Compute and display summary metrics for evaluation results.
-        Note this functin can *only* be applied on the default parameter setting
+        Compute and display summary metrics for custom evaluation results.
+        Paramters can be tuned via eval_custom()
         """
 
         def _summarize(ap=1, iouThr=None, areaRng="all", maxDets=100):
@@ -1040,6 +1031,7 @@ class COCOeval:
             return mean_s
 
         def _summarizeDets():
+            # changes made to make it dynamic rather than static (stock function is static)
             stats = np.zeros((12,))
             stats[0] = _summarize(1, maxDets=self.params.maxDets[2])
             stats[1] = _summarize(
@@ -1060,6 +1052,7 @@ class COCOeval:
             return stats
 
         def _summarizeKps():
+            # sasme as stock function
             stats = np.zeros((10,))
             stats[0] = _summarize(1, maxDets=20)
             stats[1] = _summarize(1, maxDets=20, iouThr=0.5)

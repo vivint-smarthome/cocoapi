@@ -1076,27 +1076,48 @@ class COCOeval:
         self.stats = summarize()
 
     def makeplot_2(self, save_to_dir=None, catIds=[], confidence_threshold=0):
+        """
+        This function generates PR curves for given confidence and for a set of ious using 'self.eval'
+        It will plot a bunch of plots in the 'save_to_dir' directory
+        Note : confidence_threshold is only used while naming the plot file
+        """
 
+        # check if the directory already exist, if not create one
         if save_to_dir is not None and not os.path.exists(save_to_dir):
             os.makedirs(save_to_dir)
 
         self.params.outDir = save_to_dir
 
+        # logic to decide if we are using specific categories
+        self.params.useCats = 1
         if len(catIds) == 0:
             catIds = sorted(self.cocoGt.getCatIds())
+            self.params.useCats = 0
         self.params.catIds = catIds
+        catMapping = {
+            1: 0,
+            578: 1,
+            614: 2,
+            615: 3,
+            621: 4,
+        }  # category mapping for self.eval["precision"]
 
+        # loop through each of the categories
         for j, catId in enumerate(catIds):
+            # retriving name of the category
             nm = self.cocoGt.loadCats(catId)[0]
             if "supercategory" in nm:
                 nm = nm["supercategory"] + "-" + nm["name"]
             else:
                 nm = nm["name"]
 
+            # loop through the area categories
             for k, area in enumerate(self.params.areaRngLbl):
                 fig = plt.figure()
+
+                # loop through each iou and plot
                 for i in range(self.eval["recall"].shape[0]):
-                    y = self.eval["precision"][i, :, j, k, 0]
+                    y = self.eval["precision"][i, :, catMapping[catId], k, 0]
                     x = np.linspace(0.0, 1.00, 101, endpoint=True)
                     plt.plot(x, y, label="iou=" + str(round((i + 1) / 10, 2)))
                 plt.title(nm + "-" + area + "-" + str(confidence_threshold))
@@ -1115,6 +1136,10 @@ class COCOeval:
                 )
                 plt.close()
 
+        if self.params.useCats == 1:
+            return
+
+        # if not using specific categories, also analyze overall performance (all categories)
         for k, area in enumerate(self.params.areaRngLbl):
             fig = plt.figure()
             for i in range(self.eval["recall"].shape[0]):

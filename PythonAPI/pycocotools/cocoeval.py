@@ -1113,6 +1113,7 @@ class COCOeval:
                     + ".png",
                     bbox_inches="tight",
                 )
+                plt.close()
 
         for k, area in enumerate(self.params.areaRngLbl):
             fig = plt.figure()
@@ -1132,6 +1133,7 @@ class COCOeval:
                 + ".png",
                 bbox_inches="tight",
             )
+            plt.close()
 
 
 class Params:

@@ -1075,6 +1075,62 @@ class COCOeval:
             summarize = _summarizeKps
         self.stats = summarize()
 
+    
+    def makeplot_2(self, save_to_dir=None, catIds=[], confidence_threshold=0):
+
+        if save_to_dir is not None and not os.path.exists(save_to_dir):
+            os.makedirs(save_to_dir)
+
+        self.params.outDir = save_to_dir
+
+        if len(catIds) == 0:
+            catIds = sorted(self.cocoGt.getCatIds())
+        self.params.catIds = catIds
+
+        for j, catId in enumerate(catIds):
+            nm = self.cocoGt.loadCats(catId)[0]
+            if "supercategory" in nm:
+                nm = nm["supercategory"] + "-" + nm["name"]
+            else:
+                nm = nm["name"]
+
+            for k, area in enumerate(self.params.areaRngLbl):
+                for i in range(self.eval["recall"].shape[0]):
+                    y = self.eval["precision"][i, :, j, k, 0]
+                    x = np.linspace(0.0, 1.00, 101, endpoint=True)
+                    plt.plot(x, y, label="iou=" + str(round((i + 1) / 10, 2)))
+                plt.title(nm + "-" + area + "-" + str(confidence_threshold))
+                plt.grid()
+                plt.legend(bbox_to_anchor=(1.05, 1.0), loc="upper left")
+                plt.savefig(
+                    self.params.outDir
+                    + "/"
+                    + nm
+                    + "_"
+                    + area
+                    + "_Conf_"
+                    + str(confidence_threshold)
+                    + ".png",
+                    bbox_inches="tight"
+                )
+
+        for k, area in enumerate(self.params.areaRngLbl):
+            for i in range(self.eval["recall"].shape[0]):
+                y = y = np.mean(self.eval["precision"][i, :, :, k, 0], axis=1)
+                x = np.linspace(0.0, 1.00, 101, endpoint=True)
+                plt.plot(x, y, label="iou=" + str(round((i + 1) / 10, 2)))
+            plt.title("Overall - " + area + "-" + str(confidence_threshold))
+            plt.grid()
+            plt.legend(bbox_to_anchor=(1.05, 1.0), loc="upper left")
+            plt.savefig(self.params.outDir
+                + "/overall_"
+                + area
+                + "_Conf_"
+                + str(confidence_threshold)
+                + ".png",
+                bbox_inches="tight"W
+            )
+
 
 class Params:
     """

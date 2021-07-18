@@ -1075,7 +1075,6 @@ class COCOeval:
             summarize = _summarizeKps
         self.stats = summarize()
 
-    
     def makeplot_2(self, save_to_dir=None, catIds=[], confidence_threshold=0):
 
         if save_to_dir is not None and not os.path.exists(save_to_dir):
@@ -1111,7 +1110,7 @@ class COCOeval:
                     + "_Conf_"
                     + str(confidence_threshold)
                     + ".png",
-                    bbox_inches="tight"
+                    bbox_inches="tight",
                 )
 
         for k, area in enumerate(self.params.areaRngLbl):
@@ -1122,13 +1121,14 @@ class COCOeval:
             plt.title("Overall - " + area + "-" + str(confidence_threshold))
             plt.grid()
             plt.legend(bbox_to_anchor=(1.05, 1.0), loc="upper left")
-            plt.savefig(self.params.outDir
+            plt.savefig(
+                self.params.outDir
                 + "/overall_"
                 + area
                 + "_Conf_"
                 + str(confidence_threshold)
                 + ".png",
-                bbox_inches="tight"W
+                bbox_inches="tight",
             )
 
 

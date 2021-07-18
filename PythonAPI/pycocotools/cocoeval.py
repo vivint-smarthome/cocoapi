@@ -1094,6 +1094,7 @@ class COCOeval:
                 nm = nm["name"]
 
             for k, area in enumerate(self.params.areaRngLbl):
+                fig = plt.figure()
                 for i in range(self.eval["recall"].shape[0]):
                     y = self.eval["precision"][i, :, j, k, 0]
                     x = np.linspace(0.0, 1.00, 101, endpoint=True)
@@ -1101,7 +1102,7 @@ class COCOeval:
                 plt.title(nm + "-" + area + "-" + str(confidence_threshold))
                 plt.grid()
                 plt.legend(bbox_to_anchor=(1.05, 1.0), loc="upper left")
-                plt.savefig(
+                fig.savefig(
                     self.params.outDir
                     + "/"
                     + nm
@@ -1114,6 +1115,7 @@ class COCOeval:
                 )
 
         for k, area in enumerate(self.params.areaRngLbl):
+            fig = plt.figure()
             for i in range(self.eval["recall"].shape[0]):
                 y = y = np.mean(self.eval["precision"][i, :, :, k, 0], axis=1)
                 x = np.linspace(0.0, 1.00, 101, endpoint=True)
@@ -1121,7 +1123,7 @@ class COCOeval:
             plt.title("Overall - " + area + "-" + str(confidence_threshold))
             plt.grid()
             plt.legend(bbox_to_anchor=(1.05, 1.0), loc="upper left")
-            plt.savefig(
+            fig.savefig(
                 self.params.outDir
                 + "/overall_"
                 + area

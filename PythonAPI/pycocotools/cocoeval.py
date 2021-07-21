@@ -1163,7 +1163,7 @@ class COCOeval:
                     label="iou="
                     + str(round((i + 1) / 10, 2))
                     + "-> "
-                    + str(round(np.mean(self.eval["precision"][i, :, :, k, 0]))),
+                    + str(round(np.mean(self.eval["precision"][i, :, :, k, 0]), 2)),
                 )
             plt.title("Overall - " + area + "-" + str(confidence_threshold))
             plt.grid()

@@ -989,7 +989,7 @@ class COCOeval:
         else:
             self.params.iouThrs = np.sort(ious, axis=None)
 
-    def summarize_2(self):
+    def summarize_2(self, is_print=True):
         """
         Compute and display summary metrics for **custom** evaluation results.
         Paramters can be tuned via eval_custom()
@@ -1027,7 +1027,8 @@ class COCOeval:
                 mean_s = -1
             else:
                 mean_s = np.mean(s[s > -1])
-            print(iStr.format(titleStr, typeStr, iouStr, areaRng, maxDets, mean_s))
+            if is_print:
+                print(iStr.format(titleStr, typeStr, iouStr, areaRng, maxDets, mean_s))
             return mean_s
 
         def _summarizeDets():
@@ -1119,7 +1120,23 @@ class COCOeval:
                 for i in range(self.eval["recall"].shape[0]):
                     y = self.eval["precision"][i, :, catMapping[catId], k, 0]
                     x = np.linspace(0.0, 1.00, 101, endpoint=True)
-                    plt.plot(x, y, label="iou=" + str(round((i + 1) / 10, 2)))
+                    plt.plot(
+                        x,
+                        y,
+                        label="iou:"
+                        + str(round((i + 1) / 10, 2))
+                        + "-> "
+                        + str(
+                            round(
+                                np.mean(
+                                    self.eval["precision"][
+                                        i, :, catMapping[catId], k, 0
+                                    ]
+                                ),
+                                2,
+                            )
+                        ),
+                    )
                 plt.title(nm + "-" + area + "-" + str(confidence_threshold))
                 plt.grid()
                 plt.legend(bbox_to_anchor=(1.05, 1.0), loc="upper left")
@@ -1136,10 +1153,7 @@ class COCOeval:
                 )
                 plt.close()
 
-        if self.params.useCats == 1:
-            return
-
-        # if not using specific categories, also analyze overall performance (all categories)
+        # Also analyze overall performance (all categories)
         for k, area in enumerate(self.params.areaRngLbl):
             fig = plt.figure()
             for i in range(self.eval["recall"].shape[0]):

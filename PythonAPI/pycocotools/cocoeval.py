@@ -1094,14 +1094,14 @@ class COCOeval:
         if len(catIds) == 0:
             catIds = sorted(self.cocoGt.getCatIds())
             self.params.useCats = 0
-        self.params.catIds = catIds
-        catMapping = {
-            1: 0,
-            578: 1,
-            614: 2,
-            615: 3,
-            621: 4,
-        }  # category mapping for self.eval["precision"]
+        self.params.catIds = sorted(catIds)
+        # catMapping = {
+        #    1: 0,
+        #    578: 1,
+        #    614: 2,
+        #    615: 3,
+        #    621: 4,
+        # }  # category mapping for self.eval["precision"]
 
         # loop through each of the categories
         for j, catId in enumerate(catIds):
@@ -1118,7 +1118,7 @@ class COCOeval:
 
                 # loop through each iou and plot
                 for i in range(self.eval["recall"].shape[0]):
-                    y = self.eval["precision"][i, :, catMapping[catId], k, 0]
+                    y = self.eval["precision"][i, :, j, k, 0]
                     x = np.linspace(0.0, 1.00, 101, endpoint=True)
                     # also adding mAP to the legend
                     plt.plot(
@@ -1129,11 +1129,7 @@ class COCOeval:
                         + "-> "
                         + str(
                             round(
-                                np.mean(
-                                    self.eval["precision"][
-                                        i, :, catMapping[catId], k, 0
-                                    ]
-                                ),
+                                np.mean(self.eval["precision"][i, :, j, k, 0]),
                                 2,
                             )
                         ),

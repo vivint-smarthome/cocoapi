@@ -1120,6 +1120,7 @@ class COCOeval:
                 for i in range(self.eval["recall"].shape[0]):
                     y = self.eval["precision"][i, :, catMapping[catId], k, 0]
                     x = np.linspace(0.0, 1.00, 101, endpoint=True)
+                    # also adding mAP to the legend
                     plt.plot(
                         x,
                         y,
@@ -1159,7 +1160,15 @@ class COCOeval:
             for i in range(self.eval["recall"].shape[0]):
                 y = y = np.mean(self.eval["precision"][i, :, :, k, 0], axis=1)
                 x = np.linspace(0.0, 1.00, 101, endpoint=True)
-                plt.plot(x, y, label="iou=" + str(round((i + 1) / 10, 2)))
+                # also adding mAP to the legend
+                plt.plot(
+                    x,
+                    y,
+                    label="iou="
+                    + str(round((i + 1) / 10, 2))
+                    + "-> "
+                    + str(round(np.mean(self.eval["precision"][i, :, :, k, 0]))),
+                )
             plt.title("Overall - " + area + "-" + str(confidence_threshold))
             plt.grid()
             plt.legend(bbox_to_anchor=(1.05, 1.0), loc="upper left")
